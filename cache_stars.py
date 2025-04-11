@@ -28,7 +28,7 @@ def get_gal_halo_model(name):
             ),
             ProfileModel(
                 FixedRHalf(float(name[2:-6])),
-                PlummerProfile()
+                DeprojectedSersicProfile()
             ),
             MetalModel(
                 Kirby2013Metallicity(),
@@ -45,7 +45,7 @@ def get_gal_halo_model(name):
             ),
             ProfileModel(
                 FixedRHalf(float(name[2:])),
-                PlummerProfile()
+                DeprojectedSersicProfile()
             ),
             MetalModel(
                 Kirby2013Metallicity(),
@@ -56,31 +56,39 @@ def get_gal_halo_model(name):
         )
     
 def main():
-    #suites = ["SymphonyLMC", "SymphonyMilkyWay",
-    #          "SymphonyGroup", "SymphonyLCluster",
-    #          "SymphonyMilkyWayHR"]
-    #suites = ["SymphonyMilkyWayHR"]
-    suites = ["SymphonyMilkyWay"]
-    
-    #method_names = ["fid_dwarf", "r=0.005", "r=0.008", "r=0.015",
-    #                "r=0.025", "r=0.05"]
-    #method_names = ["fid_dwarf_no_um", "r=0.005_no_um", "r=0.008_no_um",
-    #                "r=0.015_no_um", "r=0.025_no_um", "r=0.05_no_um"]
-    method_names = ["r=0.001", "r=1"]
+    suites = ["SymphonyLMC", "SymphonyMilkyWay", "SymphonyGroup",
+              "SymphonyLCluster", "SymphonyCluster", "SymphonyMilkyWayHR",
+              "MWest"]
+
+    no_um = ["MWest", "SymphonyMilkyWayHR", "SymphonyCluster"]
+
+    method_names = ["fid_dwarf", "r=0.0038", "r=0.0060", "r=0.0094",
+                    "r=0.015",
+                    "r=0.024", "r=0.038", "r=0.060", "r=0.15", "r=1"]
+    method_names_no_um = ["fid_dwarf_no_um", "r=0.0038", "r=0.0060_no_um",
+                          "r=0.0094_no_um", "r=0.015_no_um", "r=0.024_no_um",
+                          "r=0.038_no_um", "r=0.060_no_um", "r=1_no_um"]
     
     gal_halos = [get_gal_halo_model(name) for name in method_names]
+    gal_halos_no_um = [get_gal_halo_model(name) for name in method_names_no_um]
 
     for suite in suites:
         n_host = symlib.n_hosts(suite)
         for i_host in range(n_host):
+            if i_host != 0: continue
             print(suite, i_host+1, "/", n_host)
             sim_dir = symlib.get_host_directory(base_dir, suite, i_host)
 
             retag_state = None
             
             for i_model in range(len(gal_halos)):
-                gal_halo = gal_halos[i_model]
-                method_name = method_names[i_model]
+                if suite in no_um:
+                    gal_halo = gal_halos_no_um[i_model]
+                    method_name = method_names_no_um[i_model]
+                else:
+                    gal_halo = gal_halos[i_model]
+                    method_name = method_names[i_model]
+                    
                 print("   ", method_name)
                 
                 if i_model == 0:
