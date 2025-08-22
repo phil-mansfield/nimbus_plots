@@ -10,6 +10,6 @@
 #SBATCH --account kipac:kipac
 
 date
-#python3 cache_stars.py
+python3 cache_stars.py
 python3 galaxy_properties.py
 date

@@ -93,7 +93,7 @@ def galaxy_catalog(suite, i_host, model_names):
     mp = param["mp"]/param["h100"]
 
     print("Starting I/O")
-    part = symlib.Particles(sim_dir)
+    part = symlib.Particles(sim_dir, include="E")
     sf, hist = symlib.read_symfind(sim_dir)
 
     stars = [None]*n_model
@@ -132,7 +132,7 @@ def galaxy_catalog(suite, i_host, model_names):
                                   dtype=np.float32)
         r_half_i[im] = np.asarray(gal_hist[im]["r_half_3d_i"],
                                   dtype=np.float32)    
-
+        
     for snap in range(len(scale)):
         if np.sum(sf["ok"][1:,snap]) == 0:
             continue
@@ -161,9 +161,8 @@ def galaxy_catalog(suite, i_host, model_names):
             is_bound = np.zeros(len(x), dtype=bool)
             idx = np.arange(len(x))[ok]
 
-            E = gravitree.binding_energy(x[ok], v[ok], mp, eps[snap],
-                                         n_iter=4)
-            is_bound[idx] = E < 0
+            E = p[i]["E"]
+            is_bound = E < 0
 
             for im in range(n_model):
                 mp_star_i = stars[im][i]["mp"][is_bound[smooth]]
@@ -226,20 +225,28 @@ def galaxy_catalog(suite, i_host, model_names):
             sf["ok"].tofile(fp) # dm property
 
 def main():
-    suites = ["SymphonyMilkyWayHR", "SymphonyLMC",
-              "SymphonyGroup", "SymphonyLCluster"]
+    suites = ["SymphonyLMC", "SymphonyMilkyWay", "SymphonyGroup",
+              "SymphonyLCluster", #"SymphonyCluster",
+              "SymphonyMilkyWayHR",
+              "MWest"]
+    
+    no_um = ["MWest", "SymphonyMilkyWayHR", "SymphonyCluster"]
 
+    method_names = ["fid_dwarf", "r=0.0038", "r=0.0060", "r=0.0094",
+                    "r=0.015",
+                    "r=0.024", "r=0.038", "r=0.060", "r=0.15", "r=1"]
+    method_names_no_um = ["fid_dwarf_no_um", "r=0.0038", "r=0.0060_no_um",
+                          "r=0.0094_no_um", "r=0.015_no_um", "r=0.024_no_um",
+                          "r=0.038_no_um", "r=0.060_no_um", "r=1_no_um"]
+    
     for suite in suites:
-        if suite != "SymphonyMilkyWayHR":
-            model_names = ["fid_dwarf", "r=0.005", "r=0.008", "r=0.015",
-                           "r=0.025", "r=0.05"]
+        if suite in no_um:
+            model_names = method_names_no_um
         else:
-            model_names = ["fid_dwarf_no_um", "r=0.005_no_um", "r=0.008_no_um",
-                           "r=0.015_no_um", "r=0.025_no_um", "r=0.05_no_um"]
-            
+            model_names = method_names            
         
         n_hosts = symlib.n_hosts(suite)
-        for i_host in range(n_hosts):
+        for i_host in range(n_hosts):            
             galaxy_catalog(suite, i_host, model_names)
         
 if __name__ == "__main__": main()

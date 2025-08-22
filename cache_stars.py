@@ -11,7 +11,7 @@ def read_stars(method_name, suite, i_host):
     """ Returns a tuple of (stars, gal_hist)
     """
     fname = "%s/%s_%s_%d.dat" % (cache_dir, method_name, suite, i_host)
-
+    
     with open(fname, "rb") as fp:
         return pickle.load(fp)
 
@@ -56,9 +56,11 @@ def get_gal_halo_model(name):
         )
     
 def main():
-    suites = ["SymphonyLMC", "SymphonyMilkyWay", "SymphonyGroup",
-              "SymphonyLCluster", "SymphonyCluster", "SymphonyMilkyWayHR",
-              "MWest"]
+    suites = [#"SymphonyLMC", "SymphonyMilkyWay",
+              #"SymphonyGroup",
+              #"SymphonyLCluster", #"SymphonyCluster",
+        "MWest",
+        "SymphonyMilkyWayHR"]
 
     no_um = ["MWest", "SymphonyMilkyWayHR", "SymphonyCluster"]
 
@@ -75,7 +77,6 @@ def main():
     for suite in suites:
         n_host = symlib.n_hosts(suite)
         for i_host in range(n_host):
-            if i_host != 0: continue
             print(suite, i_host+1, "/", n_host)
             sim_dir = symlib.get_host_directory(base_dir, suite, i_host)
 

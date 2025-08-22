@@ -10,6 +10,7 @@ import scipy.stats as stats
 palette.configure(True)
 
 suite = "SymphonyMilkyWay"
+#suite = "TestSIDM"
 
 param = symlib.simulation_parameters(suite)
 mp = param["mp"]/param["h100"]
@@ -62,7 +63,10 @@ def compare_pseudo_evolve():
     plt.savefig("%s/pseudo_evolve_commpare.png" % out_dir)
 
 def pre_snap_max(h, hist):
-    return np.argmax(h["m"][:hist["first_infall_snap"]])
+    if hist["first_infall_snap"] == 0:
+        return 0
+    else:
+        return np.argmax(h["m"][:hist["first_infall_snap"]])
 
 def peak_infall_gap():
     out_dir = "plots/"
@@ -147,8 +151,7 @@ def is_slow_grower(h, hist, t, t_dyn, mp):
 
 def expansion_examples():
     out_dir = "plots/"
-    suite = "SymphonyGroup"
-    i_host = 2
+    suite = "SymphonyMilkyWay"
 
     param = symlib.simulation_parameters(suite)
     cosmo = cosmology.setCosmology('', symlib.colossus_parameters(param))
@@ -170,50 +173,50 @@ def expansion_examples():
     plt.figure()
 
     for i_host in range(symlib.n_hosts(suite)):
-        if i_host > 0: continue
-
+        if i_host != 1: continue
+        print(i_host)
+        
         sim_dir = symlib.get_host_directory(base_dir, suite, i_host)
         h, hist = symlib.read_rockstar(sim_dir)
         is_slow = is_slow_grower(h, hist, t, t_dyn, mp)
         i_subs = np.where(is_slow)[0]
-    
+
+        n = len(h)
+        snap_i, snap_f = np.zeros(n, dtype=int), np.zeros(n, dtype=int)
+        for i in range(n):
+            snap_i[i] = pre_snap_max(h[i], hist[i])
+            snap_f[i] = hist["first_infall_snap"][i]
+            
+        print(i_subs)
         part = symlib.Particles(sim_dir)
-
-        for i_sub in i_subs:
-            plt.cla()
-
-            snap_i = pre_snap_max(h[i_sub], hist[i_sub])
-            snap_f = hist["first_infall_snap"][i_sub]
-            print(i_host, i_sub, snap_i, snap_f)
-
-            mode = "all"
-            #mode = "smooth"
-            p = part.read(snap_i, i_sub, mode=mode)
         
-            ok = p["ok"]
-            x = p["x"] - h[i_sub,snap_i]["x"]
-            v = p["v"] - h[i_sub,snap_i]["v"]
-            idx = np.where(ok)[0]
-            rvir = h["rvir"][i_sub, snap_i]
+        stars, gals, ranks = symlib.tag_stars(
+            sim_dir, symlib.DWARF_GALAXY_HALO_MODEL,
+            target_subs=i_subs, star_snap=snap_i,
+            energy_method="E_sph")
+        
+        for i_sub in i_subs:
+            print(i_sub, snap_i[i_sub], snap_f[i_sub])
+            p = part.read(snap_i[i_sub], i_sub, mode="smooth")
+        
+            p["x"] -= h[i_sub,snap_i[i_sub]]["x"]
+            p["v"] -= h[i_sub,snap_i[i_sub]]["v"]
 
-            print(len(ok), np.sum(ok))
+            idx = np.arange(len(p), dtype=int)[p["ok"]]
+            ranks[i_sub].load_particles(p["x"], None, idx)
             
-            ranks = symlib.RadialEnergyRanking(
-                param, x[ok], v[ok], idx, len(x), rvir)
-            ranks.load_particles(x[ok], None, idx)
-            
-            n_snap = snap_f-snap_i + 1
+            n_snap = snap_f[i_sub]-snap_i[i_sub] + 1
             r50 = np.zeros(((np.max(ranks.ranks)+1), n_snap))
 
             T_orbit = mass_so.dynamicalTime(z, "vir", "orbit")
-            dt = T - T[snap_i]
-            dt_T_orbit = (T - T[snap_i]) / T_orbit
+            dt = T - T[snap_i[i_sub]]
+            dt_T_orbit = (T - T[snap_i[i_sub]]) / T_orbit
 
-            t_relax = ranks.ranked_relaxation_time(mp, eps[snap_i])
+            t_relax = ranks.ranked_relaxation_time(mp, eps[snap_i[i_sub]])
         
             r50[:,0] = ranks.ranked_halfmass_radius()
         
-            for snap in range(snap_i+1, snap_f+1):
+            for snap in range(snap_i[i_sub]+1, snap_f[i_sub]+1):
                 p = part.read(snap, i_sub, mode=mode)
                 x_core = np.median(p["x"][ranks.core_idx], axis=0)
                 
@@ -222,14 +225,13 @@ def expansion_examples():
                 idx = np.arange(len(ok), dtype=int)[ok]
             
                 ranks.load_particles(x, None, idx)
-                #print(ranks.ranked_halfmass_radius())
-                r50[:,snap - snap_i] = ranks.ranked_halfmass_radius()
+                r50[:,snap - snap_i[i_sub]] = ranks.ranked_halfmass_radius()
 
-            snap_0 = snap_i+1
+            snap_0 = snap_i[i_sub]+1
         
             for i in range(len(colors)):
-                _dt = (dt[snap_0:snap_f+1] - dt[snap_0])/t_relax[i]
-                _r50 = r50[i, snap_0-snap_i:]
+                _dt = (dt[snap_0:snap_f[i_sub]+1] - dt[snap_0])/t_relax[i]
+                _r50 = r50[i, snap_0-snap_i[i_sub]:]
                 plt.plot(_dt[1:], _r50[1:]/_r50[0], "o", c=colors[i])
                 plt.plot(_dt[1:], _r50[1:]/_r50[0], c=colors[i])
 
@@ -240,11 +242,11 @@ def expansion_examples():
     ts = [np.hstack(ts[i]) for i in range(5)]
     ratios = [np.hstack(ratios[i]) for i in range(5)]
 
-    #for i in range(5):
-    #    print(i)
-    #    print("ts    ", ts[i])
-    #    print("ratios", ratios[i])
-    #    print()
+    for i in range(5):
+        print(i)
+        print("ts    ", ts[i])
+        print("ratios", ratios[i])
+        print()
     
     plt.figure()
     for i in range(5):
@@ -271,7 +273,7 @@ def expansion_examples():
     plt.xlabel(r"$\Delta t/T_{relax}$")
     plt.ylabel(r"$r_{50}/r_{\rm 50}(t_{\rm tag})$")
     
-    plt.savefig("%s/expansion.png" % (out_dir,))
+    plt.savefig("%s/expansion_%s.png" % (out_dir, suite))
 
 def main():
     #compare_pseudo_evolve()

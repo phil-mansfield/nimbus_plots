@@ -168,10 +168,7 @@ def plot_model(model_name, include_labels, include_relax):
         ax.plot(bin_centers, med, "--", c=colors[j], lw=1.5)
         ax.plot(bin_centers[ok], med[ok], colors[j],
                  label=bin_names[j])
-        #ax.plot(bin_centers, med_relax, "--", c=colors[j], lw=1)
-        #ax.plot(bin_centers, med_relax2, "--", c=colors[j], lw=1)
-        #ax.plot(bin_centers, med_relax3, "--", c=colors[j], lw=1)
-
+        
     ax.plot([], [], "--", c="k", label=r"${\rm Errani+22}$")
         
     if include_labels:

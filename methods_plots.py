@@ -44,7 +44,8 @@ def fig_1():
     p = part.read(hist["first_infall_snap"][1], mode="stars", halo=1)
 
     gal_halo = fixed_r_gal_halo(0.05)
-    stars, gals, ranks = symlib.tag_stars(sim_dir, gal_halo, target_subs=(1,))
+    stars, gals, ranks = symlib.tag_stars(sim_dir, gal_halo, target_subs=(1,),
+                                          energy_method="E_sph")
     M_enc = np.cumsum(ranks[1].M, axis=0)*lib.mp
 
     c_lo, c_hi = 0.5, 0.9
@@ -106,7 +107,7 @@ def fig_1():
     ax[0].legend(loc="upper left", fontsize=17)
     
     ax[1].set_yscale("log")
-    ax[1].set_xlabel(r"$E/E_{\rm max}$")
+    ax[1].set_xlabel(r"$E/V^2_{\rm max}$")
     ax[1].set_ylabel(r"$m_p\ (M_\odot)$")
 
     ax[2].set_xscale("log")
@@ -114,6 +115,7 @@ def fig_1():
     ax[2].set_xlabel(r"$r/r_{\rm vir}$")
     ax[2].set_ylabel(r"$m(<r)\ (M_\odot)$")
     ax[2].legend(loc="lower right", fontsize=17)
+    ax[2].set_ylim(1e3, 1e9)
     
     fig.savefig("plots/methods_1.pdf")
 
@@ -124,14 +126,15 @@ def fig_2():
 
     i_host = 0
     sim_dir = symlib.get_host_directory(lib.base_dir, lib.suite, i_host)
-
+    
     rs, hist = symlib.read_rockstar(sim_dir)
     um = symlib.read_um(sim_dir)
     a = symlib.scale_factors(sim_dir)
 
     j = 3
     stars, gals, ranks = symlib.tag_stars(
-        sim_dir, symlib.DWARF_GALAXY_HALO_MODEL, target_subs=(j,)
+        sim_dir, symlib.DWARF_GALAXY_HALO_MODEL, target_subs=(j,),
+        energy_method="E_sph"
     )
     stars = stars[j]
 
@@ -160,8 +163,7 @@ def fig_2():
     ax[0,0].plot([], [], c="k", label=r"${\rm Nimbus}$")
 
     age = lib.cosmo.age(1/a - 1)
-    f = interpolate.interp1d(age, um["sfr"][j])
-    norm = integrate.quad(f, age[0], age[-1])[0]
+    norm = np.trapz(um["sfr"][j], age)
     
     ax[0,0].plot(age, um["sfr"][j]/norm, "--", color=pc("r"), lw=2,
                  label=r"${\rm target}$")
@@ -194,7 +196,7 @@ def fig_2():
     fig.savefig("plots/methods_2.pdf")
     
 def main():
-    #fig_1()
-    fig_2()
+    fig_1()
+    #fig_2()
 
 if __name__ == "__main__": main()

@@ -1,50 +1,44 @@
 import symlib
-import numpy as np
 import lib
+import cache_stars
+import numpy as np
 
-sim_dir = symlib.get_host_directory(lib.base_dir, "SymphonyLMC", 3)
-part = symlib.Particles(sim_dir)
+i_host = 0
+suite = "SymphonyMilkyWay"
+snap = 235
 
-rs, hist = symlib.read_rockstar(sim_dir)
-"""
-print(rs["m"][165,190:210])
-print(np.sqrt(np.sum((rs["x"][165,190:210] - rs["x"][0,190:210])**2, axis=1))/rs["rvir"][0,190:210])
-print(rs["m"][166,190:210])
-print(np.sqrt(np.sum((rs["x"][166,190:210] - rs["x"][0,190:210])**2, axis=1))/rs["rvir"][0,190:210])
-"""
-print(rs["x"][165,193])
+# This should point to wherever your simulation directory is
+sim_dir = symlib.get_host_directory(lib.base_dir, suite, i_host)
 
-"""
-sf, hist = symlib.read_rockstar(sim_dir)
-print(sf["m"][165,190:210])
-print(hist["merger_snap"][165])
-print(hist["first_infall_snap"][165])
-print(hist["mpeak"][165])
-print(hist["mpeak_pre"][165])
+# Read in subhalos and particles. The includ flag includes additional particle
+# propeties.
+sf, hist = symlib.read_symfind(sim_dir)
+part = symlib.Particles(sim_dir, include=["E"])
+p = part.read(235, mode="stars")
 
-#for i in [164, 165, 166]:
-for i in [165]:
-    p = part.read(193, mode="all", halo=i)
-    print(len(p))
-    print(p["smooth"])
-    print(p["ok"])
-    print(p["snap"])
-    print(p["x"][:,0])
-"""   
+# I'm doing this just to make the test script fast, but you could also
+# get your stars from symlib.tag_stars() or symlib.retag_stars().
+stars, _ = cache_stars.read_stars("fid_dwarf", "SymphonyMilkyWay", i_host)
 
-print(part.part_info.tags.id[165])
-print(part.part_info.tags.snap[165])
-print(part.part_info.tags.flag[165])
+x, v, mp_star = [], [], []
+for i in range(1, len(sf)):
+    # For now there's a bug where I forgot to add in the kinteic energy to "E".
+    # Will fix that soon.
+    dv = p[i]["v"] - sf["v"][i,snap]
+    is_bound = np.sum(dv*dv, axis=1)/2 + p[i]["E"] < 0
+    
+    x.append(p[i]["x"][~is_bound])
+    v.append(p[i]["v"][~is_bound])
+    mp_star.append(stars[i]["mp"][~is_bound])
+    
+    if i < 20:
+        print("%3d: f_dm = %.3f, f_star = %.3f" %
+              (i, sf["m"][i,snap]/hist["mpeak_pre"][i],
+               np.sum(stars[i]["mp"][is_bound])/np.sum(stars[i]["mp"])))
+    
+x, v, mp_star = np.concatenate(x), np.concatenate(v), np.concatenate(mp_star)
 
-p = part.read(192, mode="all", halo=166)
-p = part.read(192, mode="smooth", halo=166)
-print()
-print()
-p = part.read(193, mode="all", halo=165)
-print(p["x"])
-p = part.read(192, mode="all", halo=165)
-print()
-print()
-p = part.read(193, mode="smooth", halo=165)
-p = part.read(192, mode="smooth", halo=165)
-
+print("Stellar halo particles:", len(x))
+print("Satellite particles:", sum(map(len, p[1:])) - len(x))
+print("Unbound stellar halo mass: %.3g" % (np.sum(mp_star),))
+print("Bound satelite mass: %.3g" % (sum(map(lambda x: np.sum(x["mp"]), stars)) - np.sum(mp_star),))

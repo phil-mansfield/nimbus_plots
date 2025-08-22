@@ -13,7 +13,6 @@ base_dir = "/sdf/home/p/phil1/ZoomIns"
 
 z = 1/scale - 1
 t = cosmo.age(z)
-print(t)
 t_dyn = mass_so.dynamicalTime(z, "vir", "crossing")
 
 def pre_snap_max(h, hist):
