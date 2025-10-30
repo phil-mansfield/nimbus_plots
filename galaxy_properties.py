@@ -15,9 +15,8 @@ def v_disp(v, mp):
     for dim in range(3):
         sigma_sq_3d += np.sum(v[:,dim]**2*mp)
     m_tot = np.sum(mp)
-    if np.sum(mp) <= 0: m_tot = 0 # Doesn't matter, it'll be nonsense anyway
+    if np.sum(mp) <= 0: return 0.0
     sigma_sq_3d /= 3*m_tot
-    
     return np.sqrt(sigma_sq_3d)
 
 def capped_rel_max(x, x_min, debug=False):
@@ -128,9 +127,9 @@ def galaxy_catalog(suite, i_host, model_names):
     r_half_i = np.zeros((n_model, len(sf)))
 
     for im in range(n_model):
-        m_star_i[im] = np.asarray(gal_hist[im]["m_star_i"],
+        m_star_i[im] = np.asarray(gal_hist[im]["m_star"],
                                   dtype=np.float32)
-        r_half_i[im] = np.asarray(gal_hist[im]["r_half_3d_i"],
+        r_half_i[im] = np.asarray(gal_hist[im]["r_half_3d"],
                                   dtype=np.float32)    
         
     for snap in range(len(scale)):
@@ -225,28 +224,33 @@ def galaxy_catalog(suite, i_host, model_names):
             sf["ok"].tofile(fp) # dm property
 
 def main():
-    suites = ["SymphonyLMC", "SymphonyMilkyWay", "SymphonyGroup",
-              "SymphonyLCluster", #"SymphonyCluster",
-              "SymphonyMilkyWayHR",
-              "MWest"]
+    suites = [#"SymphonyLMC", "SymphonyMilkyWay",
+        #"SymphonyGroup",
+        #"SymphonyLCluster", #"SymphonyCluster",
+        #"SymphonyMilkyWayHR",
+        #"MWest"
+        "SymphonyMilkyWay"
+    ]
     
     no_um = ["MWest", "SymphonyMilkyWayHR", "SymphonyCluster"]
 
     method_names = ["fid_dwarf", "r=0.0038", "r=0.0060", "r=0.0094",
                     "r=0.015",
                     "r=0.024", "r=0.038", "r=0.060", "r=0.15", "r=1"]
-    method_names_no_um = ["fid_dwarf_no_um", "r=0.0038", "r=0.0060_no_um",
+    method_names_no_um = ["fid_dwarf_no_um", "r=0.0038_no_um", "r=0.0060_no_um",
                           "r=0.0094_no_um", "r=0.015_no_um", "r=0.024_no_um",
                           "r=0.038_no_um", "r=0.060_no_um", "r=1_no_um"]
+
+    method_names = ["r=0.0095", "r=0.095"]
     
     for suite in suites:
         if suite in no_um:
             model_names = method_names_no_um
         else:
-            model_names = method_names            
+            model_names = method_names
         
         n_hosts = symlib.n_hosts(suite)
-        for i_host in range(n_hosts):            
+        for i_host in range(n_hosts):
             galaxy_catalog(suite, i_host, model_names)
         
 if __name__ == "__main__": main()

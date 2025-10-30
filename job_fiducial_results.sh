@@ -12,4 +12,5 @@
 date
 python3 cache_stars.py
 python3 galaxy_properties.py
+#python3 tidal_track.py
 date

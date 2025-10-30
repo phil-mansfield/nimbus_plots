@@ -39,8 +39,10 @@ def axis_ratio(x, mp):
 def get_profiles(r_bins, suite):
     n_bin = len(r_bins) - 1
     n_halo = symlib.n_hosts(suite)
-
+    
     if suite == "SymphonyLCluster": n_halo = 32 # Only the first 32 work
+
+    #n_halo = 1
     
     rho, Fe_H = np.zeros((n_halo, n_bin)), np.zeros((n_halo, n_bin))
     c_a, f_merger = np.zeros((n_halo, n_bin)), np.zeros((n_halo, n_bin))
@@ -52,7 +54,7 @@ def get_profiles(r_bins, suite):
         param = symlib.simulation_parameters(sim_dir)
         mp, eps = param["mp"]/param["h100"], param["eps"]/param["h100"]
 
-        part = symlib.Particles(sim_dir)
+        part = symlib.Particles(sim_dir, include=["E"])
 
         sf, hist = symlib.read_symfind(sim_dir)
         rs, _ = symlib.read_rockstar(sim_dir)
@@ -61,6 +63,11 @@ def get_profiles(r_bins, suite):
         #p_star = part.read(last_snap, mode="stars")
         p = part.read(last_snap, mode="all")
         stars, _ = cache_stars.read_stars("fid_dwarf", suite, i_halo)
+
+        print(stars[1]["mp"])
+        print(stars[2]["mp"])
+        print(stars[3]["mp"])
+        print(stars[4]["mp"])
         
         x_ub, mp_ub, is_merger_ub, Fe_H_ub = [], [], [], []
         for i in range(1, len(p)):
@@ -69,13 +76,13 @@ def get_profiles(r_bins, suite):
                 dx -= sf["x"][i,-1]
                 dv -= sf["x"][i,-1]
                 ke = np.sum(dv**2, axis=1)/2
-                pe = gravitree.binding_energy(dx, dv, mp, eps, n_iter=3)
-                E = ke - pe
+                E = p[i]["E"]
                 ok_dm = E < 0
                 ok = ok_dm[p[i]["smooth"]]
             else:
                 ok = np.zeros(np.sum(p[i]["smooth"]), dtype=bool)
 
+                
             #print(len(dx), len(stars[i]), np.sum(p[i]["smooth"], len(ok)))
             x_ub.append(dx[p[i]["smooth"]][~ok])
             mp_ub.append(stars[i]["mp"][~ok])
@@ -124,7 +131,9 @@ def main():
     r = np.sqrt(r_bins[1:]*r_bins[:-1])
     
     for i_suite in range(len(suites)):
-        print(suites[i_suite])
+
+        if i_suite != 2: continue
+        
         c = colors[i_suite]
         rho, Fe_H, c_a, f_merger = get_profiles(r_bins, suites[i_suite])
         log_rho = np.log10(rho)

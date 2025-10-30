@@ -17,9 +17,9 @@ def read_stars(method_name, suite, i_host):
 
 def get_gal_halo_model(name):
     if name == "fid_dwarf":
-        return DWARF_GALAXY_HALO_MODEL
+        return FIDUCIAL_MODEL
     if name == "fid_dwarf_no_um":
-        return DWARF_GALAXY_HALO_MODEL_NO_UM
+        return FIDUCIAL_MODEL_NO_UM
     elif len(name) > 8 and name[:2] == "r=" and name[-6:] == "_no_um":
         return GalaxyHaloModel(
             StellarMassModel(
@@ -31,9 +31,8 @@ def get_gal_halo_model(name):
                 DeprojectedSersicProfile()
             ),
             MetalModel(
-                Kirby2013Metallicity(),
+                Mansfield2025Metallicity(),
                 Kirby2013MDF(model_type="gaussian"),
-                FlatFeHProfile(),
                 GaussianCoupalaCorrelation()
             )
         )
@@ -45,31 +44,38 @@ def get_gal_halo_model(name):
             ),
             ProfileModel(
                 FixedRHalf(float(name[2:])),
-                DeprojectedSersicProfile()
+                PlummerProfile(n_sersic)
             ),
             MetalModel(
-                Kirby2013Metallicity(),
+                Mansfield2025Metallicity(),
                 Kirby2013MDF(model_type="gaussian"),
-                FlatFeHProfile(),
                 GaussianCoupalaCorrelation()
             )
         )
     
 def main():
-    suites = [#"SymphonyLMC", "SymphonyMilkyWay",
-              #"SymphonyGroup",
-              #"SymphonyLCluster", #"SymphonyCluster",
-        "MWest",
-        "SymphonyMilkyWayHR"]
+    suites = [#"SymphonyLMC",
+              #"SymphonyMilkyWay",
+              "SymphonyGroup",
+              #"SymphonyLCluster",
+              #"SymphonyCluster",
+              #"MWest",
+              #"SymphonyMilkyWayHR"
+              #"SymphonyMilkyWay",
+    ]
 
     no_um = ["MWest", "SymphonyMilkyWayHR", "SymphonyCluster"]
 
     method_names = ["fid_dwarf", "r=0.0038", "r=0.0060", "r=0.0094",
                     "r=0.015",
                     "r=0.024", "r=0.038", "r=0.060", "r=0.15", "r=1"]
-    method_names_no_um = ["fid_dwarf_no_um", "r=0.0038", "r=0.0060_no_um",
+    method_names_no_um = ["fid_dwarf_no_um", "r=0.0038_no_um", "r=0.0060_no_um",
                           "r=0.0094_no_um", "r=0.015_no_um", "r=0.024_no_um",
-                          "r=0.038_no_um", "r=0.060_no_um", "r=1_no_um"]
+                          "r=0.038_no_um", "r=0.060_no_um",
+                          "r=0.15_no_um", "r=1_no_um"]
+
+    method_names = ["fid_dwarf"]
+    method_names_no_um = ["fid_dwarf_no_um"]
     
     gal_halos = [get_gal_halo_model(name) for name in method_names]
     gal_halos_no_um = [get_gal_halo_model(name) for name in method_names_no_um]
@@ -77,6 +83,7 @@ def main():
     for suite in suites:
         n_host = symlib.n_hosts(suite)
         for i_host in range(n_host):
+            if i_host != 26: continue
             print(suite, i_host+1, "/", n_host)
             sim_dir = symlib.get_host_directory(base_dir, suite, i_host)
 
@@ -98,7 +105,7 @@ def main():
                     stars, gal_hist, retag_state = retag_stars(
                         sim_dir, gal_halo, ranks, retag_state
                     )
-                    
+
                 fname = "%s/%s_%s_%d.dat" % (cache_dir, method_name, suite, i_host)
 
                 with open(fname, "wb+") as fp:
